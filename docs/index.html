@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Deadman Switch</title>
+</head>
+<body>
+  <h1>Deadman Switch</h1>
+
+  <h2>Reset timer</h2>
+  <p>
+    To reset the timer, go to the repo’s Actions tab, select
+    <strong>Deadman Switch</strong>, click <strong>Run workflow</strong>,
+    and enter <code>${RESET_PARAM}</code> as <code>p</code>.
+  </p>
+
+  <h2>Request secret</h2>
+  <p>
+    To request the secret, go to the Actions tab, select
+    <strong>Deadman Switch</strong>, click <strong>Run workflow</strong>,
+    and enter <code>${REQUEST_SECRET_PARAM}</code> as <code>p</code> and
+    your email address as <code>email</code>.
+  </p>
+
+  <p>
+    If the timer is &lt; 7 days, the workflow will print
+    <em>Time remaining</em> in the logs.
+    If ≥ 7 days and your email is approved, you’ll receive the secret by email.
+  </p>
+</body>
+</html>
