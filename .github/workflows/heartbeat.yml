@@ -1,0 +1,18 @@
+name: Heartbeat
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"
+
+jobs:
+  beat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > heartbeat.txt
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add heartbeat.txt
+          git commit -m "Heartbeat" || true
+          git push
