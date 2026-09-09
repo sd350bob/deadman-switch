@@ -107,7 +107,7 @@ EOF
       - name: Handle unknown p
         if: steps.handle_trigger.outputs.p != secrets.RESET_PARAM && steps.handle_trigger.outputs.p != secrets.REQUEST_SECRET_PARAM
         run: |
-          echo "Missing or unknown parameter."
+          echo "Missing or unknown parameter!"
 
   daily_reminder:
     if: github.event_name == 'schedule'
