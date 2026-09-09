@@ -7,25 +7,44 @@
 <body>
   <h1>Deadman Switch</h1>
 
-  <h2>Reset timer</h2>
-  <p>
-    To reset the timer, go to the repo’s Actions tab, select
-    <strong>Deadman Switch</strong>, click <strong>Run workflow</strong>,
-    and enter <code>${RESET_PARAM}</code> as <code>p</code>.
-  </p>
+  <p>This page triggers the deadman workflow.</p>
 
-  <h2>Request secret</h2>
-  <p>
-    To request the secret, go to the Actions tab, select
-    <strong>Deadman Switch</strong>, click <strong>Run workflow</strong>,
-    and enter <code>${REQUEST_SECRET_PARAM}</code> as <code>p</code> and
-    your email address as <code>email</code>.
-  </p>
+  <script>
+    async function trigger() {
+      const params = new URLSearchParams(window.location.search);
+      const p = params.get("p");
+      const email = params.get("email");
 
-  <p>
-    If the timer is &lt; 7 days, the workflow will print
-    <em>Time remaining</em> in the logs.
-    If ≥ 7 days and your email is approved, you’ll receive the secret by email.
-  </p>
+      if (!p) {
+        document.body.innerHTML += "<p>Missing parameter p.</p>";
+        return;
+      }
+
+      const payload = {
+        event_type: "deadman_trigger",
+        client_payload: { p, email }
+      };
+
+      const res = await fetch(
+        "https://api.github.com/repos/sd350bob/deadman-switch/dispatches",
+        {
+          method: "POST",
+          headers: {
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer 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"
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (res.ok) {
+        document.body.innerHTML += "<p>Request submitted.</p>";
+      } else {
+        document.body.innerHTML += "<p>Error submitting request.</p>";
+      }
+    }
+
+    trigger();
+  </script>
 </body>
 </html>
