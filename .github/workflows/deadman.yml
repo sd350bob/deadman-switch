@@ -72,32 +72,40 @@ jobs:
 
           echo "Sending secret to $EMAIL"
 
-          python - <<EOF
-import smtplib, ssl
 
-host="${{ secrets.SMTP_HOST }}"
-port=int("${{ secrets.SMTP_PORT }}")
-user="${{ secrets.SMTP_USER }}"
-password="${{ secrets.SMTP_PASS }}"
-sender="${{ secrets.SMTP_FROM }}"
+      - name: Send emails
+        run: |
+          python - <<'EOF'
+          import smtplib, ssl
 
-msg=f"Subject: Deadman Secret\n\n{SECRET}"
-owner_msg=f"Subject: Deadman Event\n\nEmail: {EMAIL}"
+          host = "${{ secrets.SMTP_HOST }}"
+          port = int("${{ secrets.SMTP_PORT }}")
+          user = "${{ secrets.SMTP_USER }}"
+          password = "${{ secrets.SMTP_PASS }}"
+          sender = "${{ secrets.SMTP_FROM }}"
+          secret = "${{ secrets.SECRET_PAYLOAD }}"
+          email = "${{ steps.handle_trigger.outputs.email }}"
+          owner = "${{ secrets.OWNER_EMAIL }}"
 
-ctx=ssl.create_default_context()
-with smtplib.SMTP(host, port) as s:
-    s.starttls(context=ctx)
-    s.login(user, password)
-    s.sendmail(sender, EMAIL, msg)
-    s.sendmail(sender, OWNER, owner_msg)
-EOF
+          msg = f"Subject: Deadman Secret\n\n{secret}"
+          owner_msg = f"Subject: Deadman Event\n\nEmail: {email}"
+
+          ctx = ssl.create_default_context()
+          with smtplib.SMTP(host, port) as s:
+              s.starttls(context=ctx)
+              s.login(user, password)
+              s.sendmail(sender, email, msg)
+              s.sendmail(sender, owner, owner_msg)
+          EOF
 
           LOG_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          echo "$LOG_TIME - $EMAIL" >> unlock.log
+          echo "$LOG_TIME - $email" >> unlock.log
           git add unlock.log
-          git commit -m "Unlock event for $EMAIL" || true
+          git commit -m "Unlock event for $email" || true
           git push
-
+      
+      
+      
       - name: Handle secret request (<7 days)
         if: steps.handle_trigger.outputs.p == secrets.REQUEST_SECRET_PARAM && steps.elapsed.outputs.days < 7
         run: |
@@ -135,19 +143,19 @@ EOF
         run: |
           OWNER="${{ secrets.OWNER_EMAIL }}"
           python - <<EOF
-import smtplib, ssl
-
-host="${{ secrets.SMTP_HOST }}"
-port=int("${{ secrets.SMTP_PORT }}")
-user="${{ secrets.SMTP_USER }}"
-password="${{ secrets.SMTP_PASS }}"
-sender="${{ secrets.SMTP_FROM }}"
-
-msg=f"Subject: Deadman Reminder\n\nElapsed: ${{ steps.elapsed.outputs.days }} days."
-
-ctx=ssl.create_default_context()
-with smtplib.SMTP(host, port) as s:
-    s.starttls(context=ctx)
-    s.login(user, password)
-    s.sendmail(sender, OWNER, msg)
-EOF
+            import smtplib, ssl
+            
+            host="${{ secrets.SMTP_HOST }}"
+            port=int("${{ secrets.SMTP_PORT }}")
+            user="${{ secrets.SMTP_USER }}"
+            password="${{ secrets.SMTP_PASS }}"
+            sender="${{ secrets.SMTP_FROM }}"
+            
+            msg=f"Subject: Deadman Reminder\n\nElapsed: ${{ steps.elapsed.outputs.days }} days."
+            
+            ctx=ssl.create_default_context()
+            with smtplib.SMTP(host, port) as s:
+                s.starttls(context=ctx)
+                s.login(user, password)
+                s.sendmail(sender, OWNER, msg)
+            EOF
