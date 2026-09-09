@@ -35,7 +35,9 @@ jobs:
           echo "days=$DAYS" >> $GITHUB_OUTPUT
 
       - name: Reset timer
-        if: steps.handle_trigger.outputs.p == secrets.RESET_PARAM
+        env:
+          RESET_PARAM: ${{ secrets.RESET_PARAM }}      
+        if: ${{ steps.handle_trigger.outputs.p == env.RESET_PARAM }}
         run: |
           NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           jq --arg now "$NOW" '.last_reset = $now' state.json > tmp && mv tmp state.json
@@ -47,7 +49,9 @@ jobs:
           echo "Timer reset."
 
       - name: Handle secret request (>=7 days)
-        if: steps.handle_trigger.outputs.p == secrets.REQUEST_SECRET_PARAM && steps.elapsed.outputs.days >= 7
+        env:
+          REQUEST_SECRET_PARAM: ${{ secrets.REQUEST_SECRET_PARAM }}         
+        if: ${{ steps.handle_trigger.outputs.p == env.REQUEST_SECRET_PARAM && steps.elapsed.outputs.days >= 7 }}
         run: |
           EMAIL="${{ steps.handle_trigger.outputs.email }}"
           if [ -z "$EMAIL" ]; then
@@ -107,13 +111,18 @@ jobs:
       
       
       - name: Handle secret request (<7 days)
-        if: steps.handle_trigger.outputs.p == secrets.REQUEST_SECRET_PARAM && steps.elapsed.outputs.days < 7
+        env:
+          REQUEST_SECRET_PARAM: ${{ secrets.REQUEST_SECRET_PARAM }}         
+        if: steps.handle_trigger.outputs.p == env.REQUEST_SECRET_PARAM && steps.elapsed.outputs.days < 7
         run: |
           REMAIN=$(( 7 - ${{ steps.elapsed.outputs.days }} ))
           echo "Time remaining: $REMAIN days."
 
       - name: Handle unknown p
-        if: steps.handle_trigger.outputs.p != secrets.RESET_PARAM && steps.handle_trigger.outputs.p != secrets.REQUEST_SECRET_PARAM
+        env:
+          RESET_PARAM: ${{ secrets.RESET_PARAM }}              
+          REQUEST_SECRET_PARAM: ${{ secrets.REQUEST_SECRET_PARAM }}         
+        if: steps.handle_trigger.outputs.p != env.RESET_PARAM && steps.handle_trigger.outputs.p != env.REQUEST_SECRET_PARAM
         run: |
           echo "Missing or unknown parameter!"
 
