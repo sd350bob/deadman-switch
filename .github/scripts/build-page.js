@@ -111,7 +111,7 @@ const htmlContent = `<!DOCTYPE html>
     <div id="result"></div>
   </div>
 
-  <script>
+<script>
     const PAYLOADS = ${JSON.stringify(encryptedPayloads)};
     const LAST_RESET_ISO = "${lastReset.toISOString()}";
     const PUSHOVER_USER = "${pushoverUser}";
@@ -125,9 +125,8 @@ const htmlContent = `<!DOCTYPE html>
       return bytes;
     }
 
-    // Front-end Key Derivation (Matches Node.js)
+    // Front-end Key Derivation
     async function deriveCryptoKey(inputKey) {
-      // Strip spaces, quotes, and newlines identically to Node script
       const cleanKey = inputKey.trim().replace(/^["']|["']$/g, '');
       let keyBytes;
 
@@ -135,12 +134,14 @@ const htmlContent = `<!DOCTYPE html>
         keyBytes = hexToBytes(cleanKey);
       } else {
         const encoder = new TextEncoder();
-        const data = encoder.encode(cleanKey); // Explicit UTF-8 byte encoding
-        const hashBuffer = await window.crypto.subcrypto.digest('SHA-256', data);
+        const data = encoder.encode(cleanKey);
+        // Corrected: window.crypto.subtle
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
         keyBytes = new Uint8Array(hashBuffer);
       }
 
-      return await window.crypto.subcrypto.importKey(
+      // Corrected: window.crypto.subtle
+      return await window.crypto.subtle.importKey(
         "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
       );
     }
@@ -156,7 +157,8 @@ const htmlContent = `<!DOCTYPE html>
         cipherText.set(content);
         cipherText.set(tag, content.length);
 
-        const decrypted = await window.crypto.subcrypto.decrypt(
+        // Corrected: window.crypto.subtle
+        const decrypted = await window.crypto.subtle.decrypt(
           { name: "AES-GCM", iv: iv, tagLength: 128 },
           cryptoKey,
           cipherText
