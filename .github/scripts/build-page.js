@@ -116,21 +116,21 @@ const htmlContent = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Deadman Switch</title>
+  <title>Bob's Deadman Switch</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
     .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; width: 100%; text-align: center; }
     input { width: 100%; padding: 0.5rem; margin: 1rem 0; box-sizing: border-box; }
     button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background-color: #0056b3; }
-    #result { margin-top: 1rem; word-break: break-all; }
+    #result { margin-top: 1rem; word-break: break-all; text-align: left; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>Deadman Switch</h2>
+    <h2>Bob's Deadman Switch</h2>
     <input type="password" id="keyInput" placeholder="Enter Decryption Key" />
-    <button onclick="handleDecrypt()">Decrypt</button>
+    <button id="submitBtn" onclick="handleDecrypt()">Decrypt</button>
     <div id="result"></div>
   </div>
 
@@ -207,7 +207,9 @@ const htmlContent = `<!DOCTYPE html>
     }
 
     async function handleDecrypt() {
-      const rawKeyInput = document.getElementById("keyInput").value;
+      const keyInputEl = document.getElementById("keyInput");
+      const submitBtnEl = document.getElementById("submitBtn");
+      const rawKeyInput = keyInputEl.value;
       const keyInput = rawKeyInput.trim();
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "Processing...";
@@ -240,12 +242,17 @@ const htmlContent = `<!DOCTYPE html>
         resultDiv.innerText = "Decryption key is not valid";
         logMessage = \`Key Prefix: \${keyPrefix}\\nResult: Decryption key is not valid\`;
       } else if (decryptedMessage === "TIMER_RUNNING") {
+        // Hide input textbox and submit button
+        keyInputEl.style.display = 'none';
+        submitBtnEl.style.display = 'none';
+
         const lastResetDate = new Date(LAST_RESET_ISO);
-        const expiryDate = new Date(lastResetDate.getTime() + (7 * 24 * 60 * 60 * 1000));
-        const diff = expiryDate - new Date();
+        // Add 7 days base timeout + 24 hours (1 day) buffer to account for cron job schedule delay
+        const expiryDateWithCronBuffer = new Date(lastResetDate.getTime() + (8 * 24 * 60 * 60 * 1000));
+        const diff = expiryDateWithCronBuffer - new Date();
 
         if (diff <= 0) {
-          resultDiv.innerHTML = "Timer pending daily refresh.";
+          resultDiv.innerHTML = "Timer pending daily refresh.<br><br>Try again then.";
           logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: Timer pending daily refresh\`;
         } else {
           const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -255,7 +262,7 @@ const htmlContent = `<!DOCTYPE html>
           const timeRemainingStr = \`\${days} days \${hours} hours \${mins} minutes\`;
           const dateStr = lastResetDate.toISOString().replace('T', ' ').substring(0, 16);
           
-          resultDiv.innerHTML = \`Last reset on \${dateStr}.<br>Time remaining: \${timeRemainingStr}\`;
+          resultDiv.innerHTML = \`Last reset on \${dateStr}.<br>Time remaining: \${timeRemainingStr}<br><br>Try again then.\`;
           logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: \${timeRemainingStr}\`;
         }
       } else {
