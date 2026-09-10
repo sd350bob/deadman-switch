@@ -5,6 +5,10 @@ on:
   #repository_dispatch:
   #  types: [reset_timer]
 
+permissions:
+  actions: write   # Grants GITHUB_TOKEN permission to trigger workflow dispatches
+  contents: write  # Keeps repo write access if state files are updated
+  
 jobs:
   reset:
     runs-on: ubuntu-latest
