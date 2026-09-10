@@ -45,6 +45,7 @@ async function sendPushoverNotification(message) {
   if (diffDays > 1 && diffDays < 31) {
     const remainingDays = Math.max(0, Math.ceil(7 - diffDays));
     await sendPushoverNotification(`Days to deadman timeout: ${remainingDays}`);
+    console.log('diffDays:', diffDays);
   }
 })();
 
