@@ -2,13 +2,16 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+// Capture build time at execution
+const buildTimeIso = new Date().toISOString();
+
 // 1. Read key inputs from environment variables
 const rawKeys = process.env.ENCRYPTION_KEYS || '';
 const secretUrl = process.env.SECRET_URL || '';
 const pushoverUser = process.env.PUSHOVER_USER_KEY || '';
 const pushoverToken = process.env.PUSHOVER_TOKEN || '';
 
-// 2. Read timestamp from process.env instead of state.json
+// 2. Read timestamp from process.env
 const rawTimestamp = process.env.LAST_RESET_TIMESTAMP || '';
 
 if (!rawKeys) {
@@ -24,11 +27,9 @@ if (!secretUrl) {
 // 3. Fallback and sanitize timestamp string
 let lastReset;
 if (rawTimestamp) {
-  // Convert "YYYY-MM-DD HH:MM:SSZ" to standard ISO "YYYY-MM-DDTHH:MM:SSZ"
   const cleanIsoString = rawTimestamp.trim().replace(' ', 'T');
   lastReset = new Date(cleanIsoString);
 } else {
-  // Fallback to current time if variable is missing
   console.warn('Warning: LAST_RESET_TIMESTAMP not provided. Falling back to current time.');
   lastReset = new Date();
 }
@@ -99,12 +100,12 @@ function encrypt(text, keyBuffer) {
 const encryptedPayloads = [];
 
 if (diffDays >= 7) {
-  // Switch expired: encrypt the actual secret URL for all keys
+  // Switch expired: encrypt actual secret
   cryptoKeys.forEach(keyBuf => {
     encryptedPayloads.push(encrypt(secretUrl, keyBuf));
   });
 } else {
-  // Switch active: encrypt "TIMER_RUNNING" dummy message
+  // Switch active: encrypt dummy payload
   cryptoKeys.forEach(keyBuf => {
     encryptedPayloads.push(encrypt("TIMER_RUNNING", keyBuf));
   });
@@ -124,6 +125,7 @@ const htmlContent = `<!DOCTYPE html>
     button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background-color: #0056b3; }
     #result { margin-top: 1rem; word-break: break-all; text-align: left; }
+    .build-time { margin-top: 1.5rem; font-size: 0.75rem; color: #6c757d; text-align: center; }
   </style>
 </head>
 <body>
@@ -132,13 +134,18 @@ const htmlContent = `<!DOCTYPE html>
     <input type="password" id="keyInput" placeholder="Enter Decryption Key" />
     <button id="submitBtn" onclick="handleDecrypt()">Decrypt</button>
     <div id="result"></div>
+    <div class="build-time">Page built on: <span id="buildTimeSpan"></span></div>
   </div>
 
   <script>
     const PAYLOADS = ${JSON.stringify(encryptedPayloads)};
     const LAST_RESET_ISO = "${lastReset.toISOString()}";
+    const BUILD_TIME_ISO = "${buildTimeIso}";
     const PUSHOVER_USER = "${pushoverUser}";
     const PUSHOVER_TOKEN = "${pushoverToken}";
+
+    // Render formatted build time
+    document.getElementById("buildTimeSpan").innerText = new Date(BUILD_TIME_ISO).toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
 
     function hexToBytes(hex) {
       const bytes = new Uint8Array(hex.length / 2);
@@ -242,14 +249,17 @@ const htmlContent = `<!DOCTYPE html>
         resultDiv.innerText = "Decryption key is not valid";
         logMessage = \`Key Prefix: \${keyPrefix}\\nResult: Decryption key is not valid\`;
       } else if (decryptedMessage === "TIMER_RUNNING") {
-        // Hide input textbox and submit button
         keyInputEl.style.display = 'none';
         submitBtnEl.style.display = 'none';
 
         const lastResetDate = new Date(LAST_RESET_ISO);
-        // Add 7 days base timeout + 24 hours (1 day) buffer to account for cron job schedule delay
-        const expiryDateWithCronBuffer = new Date(lastResetDate.getTime() + (8 * 24 * 60 * 60 * 1000));
-        const diff = expiryDateWithCronBuffer - new Date();
+        const buildTimeDate = new Date(BUILD_TIME_ISO);
+        const userNow = new Date();
+
+        // Formula: Target Estimated Secret Reveal Time = buildTime + 1 day + (7 days - (now - lastReset))
+        // Which simplifies to: (lastReset + 7 days) + (buildTime + 1 day - userNow)
+        const targetRevealTime = new Date(lastResetDate.getTime() + (7 * 24 * 60 * 60 * 1000) + (buildTimeDate.getTime() + (24 * 60 * 60 * 1000) - userNow.getTime()));
+        const diff = targetRevealTime - userNow;
 
         if (diff <= 0) {
           resultDiv.innerHTML = "Timer pending daily refresh.<br><br>Try again then.";
@@ -262,7 +272,7 @@ const htmlContent = `<!DOCTYPE html>
           const timeRemainingStr = \`\${days} days \${hours} hours \${mins} minutes\`;
           const dateStr = lastResetDate.toISOString().replace('T', ' ').substring(0, 16);
           
-          resultDiv.innerHTML = \`Last reset on \${dateStr}.<br>Time remaining: \${timeRemainingStr}<br><br>Try again then.\`;
+          resultDiv.innerHTML = \`Last reset on \${dateStr} UTC.<br>Time remaining: \${timeRemainingStr}<br><br>Try again then.\`;
           logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: \${timeRemainingStr}\`;
         }
       } else {
