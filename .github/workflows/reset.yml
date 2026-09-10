@@ -20,6 +20,10 @@ jobs:
       #   env:
       #     GH_TOKEN: ${{ secrets.deadman_reset }}
 
+        # Step 1: Must checkout the repository first so .git exists
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
       - name: Update Repository Variable
         env:
           GH_TOKEN: ${{ secrets.PAT_VARIABLE_ADMIN }}
