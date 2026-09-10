@@ -120,7 +120,7 @@ const htmlContent = `<!DOCTYPE html>
       return bytes;
     }
 
-    // Front-end Key Derivation (Matches Node.js)
+    // Front-end Key Derivation
     async function deriveCryptoKey(inputKey) {
       const cleanKey = inputKey.trim();
       let keyBytes;
@@ -128,7 +128,6 @@ const htmlContent = `<!DOCTYPE html>
       if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
         keyBytes = hexToBytes(cleanKey);
       } else {
-        // Hash passphrase using SHA-256 in the browser
         const encoder = new TextEncoder();
         const data = encoder.encode(cleanKey);
         const hashBuffer = await window.crypto.subcrypto.digest('SHA-256', data);
@@ -158,7 +157,7 @@ const htmlContent = `<!DOCTYPE html>
         );
         return new TextDecoder().decode(decrypted);
       } catch (e) {
-        return null; // Key invalid or tag mismatch
+        return null;
       }
     }
 
@@ -168,7 +167,7 @@ const htmlContent = `<!DOCTYPE html>
         const params = new URLSearchParams({
           token: PUSHOVER_TOKEN,
           user: PUSHOVER_USER,
-          message: \`Deadman Switch Access Attempt\\nResult: \${logResult}\\nTimestamp: \${new Date().toISOString()}\`
+          message: \`Deadman Switch Access Attempt\\n\${logResult}\`
         });
         await fetch('https://api.pushover.net/1/messages.json', {
           method: 'POST',
@@ -181,12 +180,16 @@ const htmlContent = `<!DOCTYPE html>
     }
 
     async function handleDecrypt() {
-      const keyInput = document.getElementById("keyInput").value;
+      const rawKeyInput = document.getElementById("keyInput").value;
+      const keyInput = rawKeyInput.trim();
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "Processing...";
 
-      if (!keyInput.trim()) {
+      const keyPrefix = keyInput.length > 0 ? keyInput.substring(0, 5) : "EMPTY";
+
+      if (!keyInput) {
         resultDiv.innerText = "Decryption key is not valid";
+        logToPushover(\`Key Prefix: \${keyPrefix}\\nResult: Decryption key is not valid\`);
         return;
       }
 
@@ -204,36 +207,39 @@ const htmlContent = `<!DOCTYPE html>
         decryptedMessage = null;
       }
 
-      let logPayload = "Decryption key is not valid";
+      let logMessage = "";
 
       if (!decryptedMessage) {
         resultDiv.innerText = "Decryption key is not valid";
+        logMessage = \`Key Prefix: \${keyPrefix}\\nResult: Decryption key is not valid\`;
       } else if (decryptedMessage === "TIMER_RUNNING") {
-        logPayload = "TIMER_RUNNING";
         const lastResetDate = new Date(LAST_RESET_ISO);
         const expiryDate = new Date(lastResetDate.getTime() + (7 * 24 * 60 * 60 * 1000));
         const diff = expiryDate - new Date();
 
         if (diff <= 0) {
           resultDiv.innerHTML = "Timer pending daily refresh.";
+          logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: Timer pending daily refresh\`;
         } else {
           const days = Math.floor(diff / (1000 * 60 * 60 * 24));
           const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
           const mins = Math.floor((diff / 1000 / 60) % 60);
 
+          const timeRemainingStr = \`\${days} days \${hours} hours \${mins} minutes\`;
           const dateStr = lastResetDate.toISOString().replace('T', ' ').substring(0, 16);
-          resultDiv.innerHTML = \`Last reset on \${dateStr}.<br>Time remaining: \${days} days \${hours} hours \${mins} minutes\`;
+          
+          resultDiv.innerHTML = \`Last reset on \${dateStr}.<br>Time remaining: \${timeRemainingStr}\`;
+          logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: \${timeRemainingStr}\`;
         }
       } else {
-        logPayload = "SUCCESS (SECRET_URL REDACTED)";
+        logMessage = \`Key Prefix: \${keyPrefix}\\nResult: SUCCESS (SECRET_URL REDACTED)\`;
         resultDiv.innerHTML = \`You can now <a href="\${decryptedMessage}">download the required files</a>.\`;
       }
 
-      logToPushover(logPayload);
+      logToPushover(logMessage);
     }
   </script>
 </body>
 </html>`;
 
 fs.writeFileSync('./index.html', htmlContent);
-
