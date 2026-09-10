@@ -22,12 +22,17 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Debug Variable
+        run: |
+          echo "Variable value is: '${{ vars.LAST_RESET_TIMESTAMP }}'"
+        
       - name: Build Page
         env:
           ENCRYPTION_KEYS: ${{ secrets.ENCRYPTION_KEYS }}
           SECRET_URL: ${{ secrets.SECRET_URL }}
           PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
           PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          LAST_RESET_TIMESTAMP: ${{ vars.LAST_RESET_TIMESTAMP }}
         run: node .github/scripts/build-page.js
 
       - name: Upload GitHub Pages Artifact
