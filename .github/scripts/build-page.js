@@ -173,6 +173,7 @@ const htmlContent = `<!DOCTYPE html>
         await fetch('https://api.pushover.net/1/messages.json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          sound: none,
           body: params
         });
       } catch (e) {
