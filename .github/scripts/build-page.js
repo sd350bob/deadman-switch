@@ -47,20 +47,18 @@ async function sendPushoverNotification(message) {
   }
 })();
 
-// AES-256-GCM Encryption Helper
+// Node.js Key Derivation Helper
+function getKeyBuffer(rawKeyString) {
+  const cleanKey = rawKeyString.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
+    return Buffer.from(cleanKey, 'hex');
+  }
+  return crypto.createHash('sha256').update(cleanKey).digest();
+}
+
 // AES-256-GCM Encryption Helper
 function encrypt(text, rawKeyString) {
-  const cleanKey = rawKeyString.trim();
-  let keyBuffer;
-
-  // If the key is a 64-character hex string, parse it as hex
-  if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
-    keyBuffer = Buffer.from(cleanKey, 'hex');
-  } else {
-    // If it's a plain text passphrase, hash it with SHA-256 to guarantee a 32-byte key
-    keyBuffer = crypto.createHash('sha256').update(cleanKey).digest();
-  }
-
+  const keyBuffer = getKeyBuffer(rawKeyString);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, iv);
   
@@ -75,7 +73,6 @@ function encrypt(text, rawKeyString) {
   };
 }
 
-// Clean and filter comma-separated keys from environment variable
 const keys = keysString
   .split(',')
   .map(k => k.trim())
@@ -103,8 +100,8 @@ const htmlContent = `<!DOCTYPE html>
 <body>
   <div class="box">
     <h2>Deadman Switch Access</h2>
-    <label for="keyInput">Enter Private Encryption Key (Hex):</label>
-    <input type="text" id="keyInput" placeholder="e.g. 4f8a..."/>
+    <label for="keyInput">Enter Private Encryption Key:</label>
+    <input type="text" id="keyInput" placeholder="Enter key or passphrase..."/>
     <button onclick="handleDecrypt()">Submit</button>
     <div id="result"></div>
   </div>
@@ -115,7 +112,7 @@ const htmlContent = `<!DOCTYPE html>
     const PUSHOVER_USER = "${pushoverUser}";
     const PUSHOVER_TOKEN = "${pushoverToken}";
 
-    async function hexToBytes(hex) {
+    function hexToBytes(hex) {
       const bytes = new Uint8Array(hex.length / 2);
       for (let i = 0; i < hex.length; i += 2) {
         bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
@@ -123,16 +120,32 @@ const htmlContent = `<!DOCTYPE html>
       return bytes;
     }
 
-    // AES-GCM Decryption (relies purely on tag verification without manual pepper checks)
-    async function decryptMessage(payload, keyHex) {
+    // Front-end Key Derivation (Matches Node.js)
+    async function deriveCryptoKey(inputKey) {
+      const cleanKey = inputKey.trim();
+      let keyBytes;
+
+      if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
+        keyBytes = hexToBytes(cleanKey);
+      } else {
+        // Hash passphrase using SHA-256 in the browser
+        const encoder = new TextEncoder();
+        const data = encoder.encode(cleanKey);
+        const hashBuffer = await window.crypto.subcrypto.digest('SHA-256', data);
+        keyBytes = new Uint8Array(hashBuffer);
+      }
+
+      return await window.crypto.subcrypto.importKey(
+        "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
+      );
+    }
+
+    // Decrypt Function
+    async function decryptMessage(payload, cryptoKey) {
       try {
-        const keyBytes = await hexToBytes(keyHex);
-        const cryptoKey = await window.crypto.subcrypto.importKey(
-          "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
-        );
-        const iv = await hexToBytes(payload.iv);
-        const tag = await hexToBytes(payload.tag);
-        const content = await hexToBytes(payload.content);
+        const iv = hexToBytes(payload.iv);
+        const tag = hexToBytes(payload.tag);
+        const content = hexToBytes(payload.content);
         
         const cipherText = new Uint8Array(content.length + tag.length);
         cipherText.set(content);
@@ -145,7 +158,7 @@ const htmlContent = `<!DOCTYPE html>
         );
         return new TextDecoder().decode(decrypted);
       } catch (e) {
-        return null; // Automatic failure if key or tag does not match
+        return null; // Key invalid or tag mismatch
       }
     }
 
@@ -168,17 +181,27 @@ const htmlContent = `<!DOCTYPE html>
     }
 
     async function handleDecrypt() {
-      const keyInput = document.getElementById("keyInput").value.trim();
+      const keyInput = document.getElementById("keyInput").value;
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "Processing...";
 
+      if (!keyInput.trim()) {
+        resultDiv.innerText = "Decryption key is not valid";
+        return;
+      }
+
       let decryptedMessage = null;
-      for (const p of PAYLOADS) {
-        const msg = await decryptMessage(p, keyInput);
-        if (msg !== null) {
-          decryptedMessage = msg;
-          break;
+      try {
+        const cryptoKey = await deriveCryptoKey(keyInput);
+        for (const p of PAYLOADS) {
+          const msg = await decryptMessage(p, cryptoKey);
+          if (msg !== null) {
+            decryptedMessage = msg;
+            break;
+          }
         }
+      } catch (err) {
+        decryptedMessage = null;
       }
 
       let logPayload = "Decryption key is not valid";
@@ -202,12 +225,10 @@ const htmlContent = `<!DOCTYPE html>
           resultDiv.innerHTML = \`Last reset on \${dateStr}.<br>Time remaining: \${days} days \${hours} hours \${mins} minutes\`;
         }
       } else {
-        // Redact actual SECRET_URL in log payload
         logPayload = "SUCCESS (SECRET_URL REDACTED)";
         resultDiv.innerHTML = \`You can now <a href="\${decryptedMessage}">download the required files</a>.\`;
       }
 
-      // Log submission result to Pushover
       logToPushover(logPayload);
     }
   </script>
@@ -215,3 +236,4 @@ const htmlContent = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync('./index.html', htmlContent);
+
