@@ -1,6 +1,7 @@
 name: Reset Timer
 
 on:
+  workflow_dispatch:
   repository_dispatch:
     types: [reset_timer]
 
