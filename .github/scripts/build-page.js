@@ -86,8 +86,6 @@ if (keys.length === 0) {
 }
 
 const encryptedPayloads = keys.map(key => encrypt(payload, key));
-const keys = keysString.split(',').filter(Boolean);
-const encryptedPayloads = keys.map(key => encrypt(payload, key));
 
 const htmlContent = `<!DOCTYPE html>
 <html lang="en">
