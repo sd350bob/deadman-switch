@@ -1,4 +1,4 @@
-name: Check Switch & Build Page
+name: Daily Check
 
 on:
   schedule:
