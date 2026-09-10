@@ -2,7 +2,7 @@ name: Check Switch & Build Page
 
 on:
   schedule:
-    - cron: '17 3 * * *' # Runs nightly at 00:00 UTC
+    - cron: '17 3 * * *' # Runs nightly
   workflow_dispatch:
 
 permissions:
@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.2.0
         with:
           node-version: '24'
 
@@ -31,10 +31,9 @@ jobs:
         run: node .github/scripts/build-page.js
 
       - name: Upload GitHub Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v3.0.1
         with:
           path: '.'
 
       - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
-        
+        uses: actions/deploy-pages@v4.0.5
