@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          node-version: '24'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,7 +35,11 @@ jobs:
       - name: Upload GitHub Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          node-version: '24'
           path: '.'
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+        with:
+          node-version: '24'
+        
