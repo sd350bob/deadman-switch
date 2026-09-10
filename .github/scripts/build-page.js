@@ -50,11 +50,15 @@ async function sendPushoverNotification(message) {
 
 // Node.js Key Derivation Helper
 function getKeyBuffer(rawKeyString) {
-  const cleanKey = rawKeyString.trim();
+  // Strip spaces, quotes, and newlines
+  const cleanKey = rawKeyString.trim().replace(/^["']|["']$/g, '');
+  
+  // If exact 64-char hex string, parse as hex bytes
   if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
     return Buffer.from(cleanKey, 'hex');
   }
-  return crypto.createHash('sha256').update(cleanKey).digest();
+  // Otherwise, hash plain-text passphrases as UTF-8 via SHA-256
+  return crypto.createHash('sha256').update(cleanKey, 'utf8').digest();
 }
 
 // AES-256-GCM Encryption Helper
@@ -121,16 +125,17 @@ const htmlContent = `<!DOCTYPE html>
       return bytes;
     }
 
-    // Front-end Key Derivation
+    // Front-end Key Derivation (Matches Node.js)
     async function deriveCryptoKey(inputKey) {
-      const cleanKey = inputKey.trim();
+      // Strip spaces, quotes, and newlines identically to Node script
+      const cleanKey = inputKey.trim().replace(/^["']|["']$/g, '');
       let keyBytes;
 
       if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
         keyBytes = hexToBytes(cleanKey);
       } else {
         const encoder = new TextEncoder();
-        const data = encoder.encode(cleanKey);
+        const data = encoder.encode(cleanKey); // Explicit UTF-8 byte encoding
         const hashBuffer = await window.crypto.subcrypto.digest('SHA-256', data);
         keyBytes = new Uint8Array(hashBuffer);
       }
