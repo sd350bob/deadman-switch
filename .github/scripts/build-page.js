@@ -31,7 +31,7 @@ async function sendPushoverNotification(message) {
       body: new URLSearchParams({
         token: pushoverToken,
         user: pushoverUser,
-        sound: none,
+        sound: 'none',
         message: message
       })
     });
@@ -173,7 +173,7 @@ const htmlContent = `<!DOCTYPE html>
         await fetch('https://api.pushover.net/1/messages.json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          sound: none,
+          sound: 'none',
           body: params
         });
       } catch (e) {
