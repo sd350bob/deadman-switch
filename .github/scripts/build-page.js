@@ -42,10 +42,10 @@ async function sendPushoverNotification(message) {
 
 // Daily check: Log to Pushover if reset age is between 1 and 31 days
 (async () => {
+  console.log('diffDays:', diffDays);
   if (diffDays > 1 && diffDays < 31) {
     const remainingDays = Math.max(0, Math.ceil(7 - diffDays));
     await sendPushoverNotification(`Days to deadman timeout: ${remainingDays}`);
-    console.log('diffDays:', diffDays);
   }
 })();
 
