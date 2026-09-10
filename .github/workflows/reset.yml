@@ -2,23 +2,30 @@ name: Reset Timer
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [reset_timer]
+  #repository_dispatch:
+  #  types: [reset_timer]
 
 jobs:
   reset:
     runs-on: ubuntu-latest
     steps:
-      - name: Update Last Reset Timestamp Variable
+      # - name: Update Last Reset Timestamp Variable
+      #   run: |
+      #     NEW_DATE=$(date -u +"%Y-%m-%d %H:%M:%SZ")
+      #     gh api \
+      #       --method PATCH \
+      #       -H "Accept: application/vnd.github+json" \
+      #       /repos/${{ github.repository }}/actions/variables/LAST_RESET_TIMESTAMP \
+      #       -f value="$NEW_DATE"
+      #   env:
+      #     GH_TOKEN: ${{ secrets.deadman_reset }}
+
+      - name: Update Repository Variable
+        env:
+          GH_TOKEN: ${{ secrets.PAT_VARIABLE_ADMIN }}
         run: |
           NEW_DATE=$(date -u +"%Y-%m-%d %H:%M:%SZ")
-          gh api \
-            --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/actions/variables/LAST_RESET_TIMESTAMP \
-            -f value="$NEW_DATE"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh variable set LAST_RESET_TIMESTAMP --body "$NEW_DATE"          
 
       - name: Trigger Rebuild Immediately
         run: |
