@@ -31,6 +31,7 @@ async function sendPushoverNotification(message) {
       body: new URLSearchParams({
         token: pushoverToken,
         user: pushoverUser,
+        sound: none,
         message: message
       })
     });
