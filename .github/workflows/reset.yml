@@ -32,7 +32,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_VARIABLE_ADMIN }}
         run: |
-          NEW_DATE=$(date -u +"%Y-%m-%d %H:%M:%SZ")
+          NEW_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           gh variable set LAST_RESET_TIMESTAMP --body "$NEW_DATE"          
 
       - name: Trigger Rebuild Immediately
