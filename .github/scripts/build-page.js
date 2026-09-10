@@ -168,12 +168,12 @@ const htmlContent = `<!DOCTYPE html>
         const params = new URLSearchParams({
           token: PUSHOVER_TOKEN,
           user: PUSHOVER_USER,
+          sound: 'none',
           message: \`Deadman Switch Access Attempt\\n\${logResult}\`
         });
         await fetch('https://api.pushover.net/1/messages.json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          sound: 'none',
           body: params
         });
       } catch (e) {
