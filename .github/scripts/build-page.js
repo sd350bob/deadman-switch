@@ -48,10 +48,21 @@ async function sendPushoverNotification(message) {
 })();
 
 // AES-256-GCM Encryption Helper
-function encrypt(text, rawKeyHex) {
+// AES-256-GCM Encryption Helper
+function encrypt(text, rawKeyString) {
+  const cleanKey = rawKeyString.trim();
+  let keyBuffer;
+
+  // If the key is a 64-character hex string, parse it as hex
+  if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
+    keyBuffer = Buffer.from(cleanKey, 'hex');
+  } else {
+    // If it's a plain text passphrase, hash it with SHA-256 to guarantee a 32-byte key
+    keyBuffer = crypto.createHash('sha256').update(cleanKey).digest();
+  }
+
   const iv = crypto.randomBytes(12);
-  const key = Buffer.from(rawKeyHex.trim(), 'hex');
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, iv);
   
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
@@ -64,6 +75,17 @@ function encrypt(text, rawKeyHex) {
   };
 }
 
+// Clean and filter comma-separated keys from environment variable
+const keys = keysString
+  .split(',')
+  .map(k => k.trim())
+  .filter(Boolean);
+
+if (keys.length === 0) {
+  throw new Error("ENCRYPTION_KEYS secret is empty or missing.");
+}
+
+const encryptedPayloads = keys.map(key => encrypt(payload, key));
 const keys = keysString.split(',').filter(Boolean);
 const encryptedPayloads = keys.map(key => encrypt(payload, key));
 
