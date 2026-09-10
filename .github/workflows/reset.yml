@@ -33,6 +33,6 @@ jobs:
 
       - name: Trigger Rebuild Immediately
         run: |
-          gh workflow run build_page.yml
+          gh workflow run daily-check.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
