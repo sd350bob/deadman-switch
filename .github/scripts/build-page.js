@@ -175,21 +175,16 @@ const htmlContent = `<!DOCTYPE html>
 
       if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
         keyBytes = hexToBytes(cleanKey);
-        return await window.crypto.subtle.importKey(
-          "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
-        );
       } else {
         const encoder = new TextEncoder();
         const passphraseBytes = encoder.encode(cleanKey);
         const saltBytes = encoder.encode(SALT_STRING);
 
-        // Import raw passphrase material
         const baseKey = await window.crypto.subtle.importKey(
-          "raw", passphraseBytes, { name: "PBKDF2" }, false, ["deriveKey"]
+          "raw", passphraseBytes, { name: "PBKDF2" }, false, ["deriveBits"]
         );
 
-        // Derive 256-bit AES-GCM key using PBKDF2 with HMAC-SHA-256
-        return await window.crypto.subtle.deriveKey(
+        const derivedBits = await window.crypto.subtle.deriveBits(
           {
             name: "PBKDF2",
             salt: saltBytes,
@@ -197,11 +192,14 @@ const htmlContent = `<!DOCTYPE html>
             hash: "SHA-256"
           },
           baseKey,
-          { name: "AES-GCM", length: 256 },
-          false,
-          ["decrypt"]
+          256
         );
+        keyBytes = new Uint8Array(derivedBits);
       }
+
+      return await window.crypto.subtle.importKey(
+        "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
+      );
     }
 
     async function decryptMessage(payload, cryptoKey) {
