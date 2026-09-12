@@ -7,7 +7,7 @@ const buildTimeIso = new Date().toISOString();
 
 // Static salt for key derivation (PBKDF2 requirement)
 const SALT_STRING = "deadman-switch-pbkdf2-salt";
-const PBKDF2_ITERATIONS = 600000;
+const PBKDF2_ITERATIONS = 2E7;
 
 // 1. Read key inputs from environment variables
 const rawKeys = process.env.ENCRYPTION_KEYS || '';
