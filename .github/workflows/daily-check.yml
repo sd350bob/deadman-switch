@@ -2,7 +2,7 @@ name: Daily Check
 
 on:
   schedule:
-    - cron: '17 3 * * *' # Runs nightly
+    - cron: '17 11 * * *' # 3:17 PST, 4:17 PDT
   workflow_dispatch:
 
 permissions:
