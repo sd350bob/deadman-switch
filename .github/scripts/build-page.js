@@ -5,6 +5,10 @@ const crypto = require('crypto');
 // Capture build time at execution
 const buildTimeIso = new Date().toISOString();
 
+// Static salt for key derivation (PBKDF2 requirement)
+const SALT_STRING = "deadman-switch-pbkdf2-salt";
+const PBKDF2_ITERATIONS = 600000;
+
 // 1. Read key inputs from environment variables
 const rawKeys = process.env.ENCRYPTION_KEYS || '';
 const secretUrl = process.env.SECRET_URL || '';
@@ -69,13 +73,20 @@ async function sendPushoverNotification(message) {
   }
 })();
 
-// Key derivation helper
+// Key derivation helper using PBKDF2-HMAC-SHA256 (600,000 iterations)
 function getKeyBuffer(rawKeyString) {
   const cleanKey = rawKeyString.trim().replace(/^["']|["']$/g, '');
   if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
     return Buffer.from(cleanKey, 'hex');
   }
-  return crypto.createHash('sha256').update(cleanKey, 'utf8').digest();
+  // Derives a 32-byte (256-bit) key using PBKDF2 with 600,000 iterations
+  return crypto.pbkdf2Sync(
+    cleanKey,
+    SALT_STRING,
+    PBKDF2_ITERATIONS,
+    32,
+    'sha256'
+  );
 }
 
 // Parse comma-separated keys
@@ -144,6 +155,9 @@ const htmlContent = `<!DOCTYPE html>
     const PUSHOVER_USER = "${pushoverUser}";
     const PUSHOVER_TOKEN = "${pushoverToken}";
 
+    const SALT_STRING = "${SALT_STRING}";
+    const PBKDF2_ITERATIONS = ${PBKDF2_ITERATIONS};
+
     // Render formatted build time
     document.getElementById("buildTimeSpan").innerText = new Date(BUILD_TIME_ISO).toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
 
@@ -161,16 +175,33 @@ const htmlContent = `<!DOCTYPE html>
 
       if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
         keyBytes = hexToBytes(cleanKey);
+        return await window.crypto.subtle.importKey(
+          "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
+        );
       } else {
         const encoder = new TextEncoder();
-        const data = encoder.encode(cleanKey);
-        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-        keyBytes = new Uint8Array(hashBuffer);
-      }
+        const passphraseBytes = encoder.encode(cleanKey);
+        const saltBytes = encoder.encode(SALT_STRING);
 
-      return await window.crypto.subtle.importKey(
-        "raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]
-      );
+        // Import raw passphrase material
+        const baseKey = await window.crypto.subtle.importKey(
+          "raw", passphraseBytes, { name: "PBKDF2" }, false, ["deriveKey"]
+        );
+
+        // Derive 256-bit AES-GCM key using PBKDF2 with HMAC-SHA-256
+        return await window.crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt: saltBytes,
+            iterations: PBKDF2_ITERATIONS,
+            hash: "SHA-256"
+          },
+          baseKey,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["decrypt"]
+        );
+      }
     }
 
     async function decryptMessage(payload, cryptoKey) {
@@ -256,8 +287,6 @@ const htmlContent = `<!DOCTYPE html>
         const buildTimeDate = new Date(BUILD_TIME_ISO);
         const userNow = new Date();
 
-        // Formula: Target Estimated Secret Reveal Time = buildTime + 1 day + (7 days - (now - lastReset))
-        // Which simplifies to: (lastReset + 7 days) + (buildTime + 1 day - userNow)
         const targetRevealTime = new Date(lastResetDate.getTime() + (7 * 24 * 60 * 60 * 1000) + (buildTimeDate.getTime() + (24 * 60 * 60 * 1000) - userNow.getTime()));
         const diff = targetRevealTime - userNow;
 
