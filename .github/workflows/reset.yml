@@ -13,23 +13,13 @@ jobs:
   reset:
     runs-on: ubuntu-latest
     steps:
-      # - name: Update Last Reset Timestamp Variable
-      #   run: |
-      #     NEW_DATE=$(date -u +"%Y-%m-%d %H:%M:%SZ")
-      #     gh api \
-      #       --method PATCH \
-      #       -H "Accept: application/vnd.github+json" \
-      #       /repos/${{ github.repository }}/actions/variables/LAST_RESET_TIMESTAMP \
-      #       -f value="$NEW_DATE"
-      #   env:
-      #     GH_TOKEN: ${{ secrets.deadman_reset }}
-
         # Step 1: Must checkout the repository first so .git exists
       - name: Checkout Repository
         uses: actions/checkout@v4
         
       - name: Update Repository Variable
         env:
+          # secrets.PAT_VARIABLE_ADMIN is PAT deadman_reset with perms: Read access to metadata, Read and Write access to actions variables
           GH_TOKEN: ${{ secrets.PAT_VARIABLE_ADMIN }}
         run: |
           NEW_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -39,4 +29,4 @@ jobs:
         run: |
           gh workflow run daily-check.yml
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # auto-generated token for this execution
