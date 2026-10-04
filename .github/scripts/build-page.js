@@ -142,7 +142,7 @@ const htmlContent = `<!DOCTYPE html>
 <body>
   <div class="card">
     <h2>Bob's Deadman Switch</h2>
-    <input type="password" id="keyInput" placeholder="Enter Decryption Key" />
+    <input type="password" id="keyInput" placeholder="Enter Access Key" />
     <button id="submitBtn" onclick="handleDecrypt()">Decrypt</button>
     <div id="result"></div>
     <div class="build-time">Page built on: <span id="buildTimeSpan"></span></div>
@@ -253,8 +253,8 @@ const htmlContent = `<!DOCTYPE html>
       const keyPrefix = keyInput.length > 0 ? keyInput.substring(0, 5) : "EMPTY";
 
       if (!keyInput) {
-        resultDiv.innerText = "Decryption key is not valid";
-        logToPushover(\`Key Prefix: \${keyPrefix}\\nResult: Decryption key is not valid\`);
+        resultDiv.innerText = "Access key is not valid";
+        logToPushover(\`Key Prefix: \${keyPrefix}\\nResult: Access key is not valid\`);
         return;
       }
 
@@ -275,8 +275,8 @@ const htmlContent = `<!DOCTYPE html>
       let logMessage = "";
 
       if (!decryptedMessage) {
-        resultDiv.innerText = "Decryption key is not valid";
-        logMessage = \`Key Prefix: \${keyPrefix}\\nResult: Decryption key is not valid\`;
+        resultDiv.innerText = "Access key is not valid";
+        logMessage = \`Key Prefix: \${keyPrefix}\\nResult: Access key is not valid\`;
       } else if (decryptedMessage === "TIMER_RUNNING") {
         keyInputEl.style.display = 'none';
         submitBtnEl.style.display = 'none';
