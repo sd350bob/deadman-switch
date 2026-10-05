@@ -19,8 +19,8 @@ jobs:
         
       - name: Update Repository Variable
         env:
-          # secrets.PAT_DEADMAN_RESET_EXTERNAL is PAT deadman_reset with perms: Read access to metadata, Read and Write access to actions variables
-          GH_TOKEN: ${{ secrets.PAT_DEADMAN_RESET_EXTERNAL }}
+          # secrets.PAT_DEATMAN_RESET_INTERNAL is PAT deadman_reset with perms: Read access to metadata, Read and Write access to actions variables
+          GH_TOKEN: ${{ secrets.PAT_DEATMAN_RESET_INTERNAL }}
         run: |
           NEW_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           gh variable set LAST_RESET_TIMESTAMP --body "$NEW_DATE"          
