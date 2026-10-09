@@ -73,13 +73,13 @@ async function sendPushoverNotification(message) {
   }
 })();
 
-// Key derivation helper using PBKDF2-HMAC-SHA256 (600,000 iterations)
+// Key derivation helper using PBKDF2-HMAC-SHA256
 function getKeyBuffer(rawKeyString) {
   const cleanKey = rawKeyString.trim().replace(/^["']|["']$/g, '');
   if (/^[0-9a-fA-F]{64}$/.test(cleanKey)) {
     return Buffer.from(cleanKey, 'hex');
   }
-  // Derives a 32-byte (256-bit) key using PBKDF2 with 600,000 iterations
+  // Derives a 32-byte (256-bit) key using PBKDF2
   return crypto.pbkdf2Sync(
     cleanKey,
     SALT_STRING,
@@ -285,16 +285,16 @@ const htmlContent = `<!DOCTYPE html>
         const buildTimeDate = new Date(BUILD_TIME_ISO);
         const userNow = new Date();
 
-        const targetRevealTime = new Date(lastResetDate.getTime() + (7 * 24 * 60 * 60 * 1000) + (buildTimeDate.getTime() + (24 * 60 * 60 * 1000) - userNow.getTime()));
-        const diff = targetRevealTime - userNow;
+        // calculate the estimated time in mS until the first nightly build which will occur >= 7 days following the last reset
+        const diff_ms = (lastResetDate.getTime() + (7 * 24 * 60 * 60 * 1000) - userNow.getTime() + (buildTimeDate.getTime() - lastResetDate.getTime()) % (24 * 60 * 60 * 1000));
 
-        if (diff <= 0) {
+        if (diff_ms <= 0) { // we're past the expected time, but rebulid has not occured -- Github daily cron jobs can have over an hour of jitter
           resultDiv.innerHTML = "Timer pending daily refresh.<br><br>Try again then.";
           logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: Timer pending daily refresh\`;
         } else {
-          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-          const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-          const mins = Math.floor((diff / 1000 / 60) % 60);
+          const days = Math.floor(diff_ms / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff_ms / (1000 * 60 * 60)) % 24);
+          const mins = Math.floor((diff_ms / 1000 / 60) % 60);
 
           const timeRemainingStr = \`\${days} days \${hours} hours \${mins} minutes\`;
           const dateStr = lastResetDate.toISOString().replace('T', ' ').substring(0, 16);
@@ -303,7 +303,7 @@ const htmlContent = `<!DOCTYPE html>
           logMessage = \`Key Prefix: \${keyPrefix}\\nResult: TIMER_RUNNING\\nTime remaining: \${timeRemainingStr}\`;
         }
       } else {
-        logMessage = \`Key Prefix: \${keyPrefix}\\nResult: SUCCESS (SECRET_URL REDACTED)\`;
+        logMessage = \`Key Prefix: \${keyPrefix}\\nResult: Secret URL has been displayed!\`;
         resultDiv.innerHTML = \`You can now <a href="\${decryptedMessage}">download the required files</a>.\`;
       }
 
